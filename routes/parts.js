@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Part = require('../models/Part');
-const { protect } = require('../middleware/auth');
+const { protect, adminOnly } = require('../middleware/auth');
 
 // Get all parts (Admin ve User)
 router.get('/', protect, async (req, res) => {
@@ -30,6 +30,45 @@ router.post('/', protect, async (req, res) => {
     // Yoksa yeni oluştur
     part = await Part.create({ name: name.trim() });
     res.status(201).json(part);
+  } catch (error) {
+    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+  }
+});
+
+// Update part (Sadece Admin)
+router.put('/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    const part = await Part.findById(req.params.id);
+    if (!part) {
+      return res.status(404).json({ message: 'Parça bulunamadı' });
+    }
+
+    // Aynı isimde başka parça var mı kontrol et
+    const existingPart = await Part.findOne({ name: name.trim(), _id: { $ne: req.params.id } });
+    if (existingPart) {
+      return res.status(400).json({ message: 'Bu isimde bir parça zaten var' });
+    }
+
+    part.name = name.trim();
+    await part.save();
+    res.json(part);
+  } catch (error) {
+    res.status(500).json({ message: 'Sunucu hatası', error: error.message });
+  }
+});
+
+// Delete part (Sadece Admin)
+router.delete('/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const part = await Part.findById(req.params.id);
+    if (!part) {
+      return res.status(404).json({ message: 'Parça bulunamadı' });
+    }
+
+    await part.deleteOne();
+    res.json({ message: 'Parça silindi' });
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }

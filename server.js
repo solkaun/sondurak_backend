@@ -56,6 +56,7 @@ app.use('/api/auth/logout', require('./routes/logout'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/suppliers', require('./routes/suppliers'));
 app.use('/api/parts', require('./routes/parts'));
+app.use('/api/customer-vehicles', require('./routes/customerVehicles'));
 app.use('/api/purchases', require('./routes/purchases'));
 app.use('/api/repairs', require('./routes/repairs'));
 app.use('/api/expenses', require('./routes/expenses'));

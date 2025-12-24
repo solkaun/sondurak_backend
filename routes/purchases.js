@@ -89,8 +89,8 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
-// Delete purchase (Admin ve User)
-router.delete('/:id', protect, async (req, res) => {
+// Delete purchase (Sadece Admin)
+router.delete('/:id', protect, adminOnly, async (req, res) => {
   try {
     const purchase = await Purchase.findById(req.params.id);
     if (!purchase) {
