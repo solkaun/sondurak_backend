@@ -6,6 +6,10 @@ const repairSchema = new mongoose.Schema({
     required: true,
     default: Date.now
   },
+  customerVehicle: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CustomerVehicle'
+  },
   brand: {
     type: String,
     required: true,
@@ -21,6 +25,14 @@ const repairSchema = new mongoose.Schema({
     required: true,
     trim: true,
     uppercase: true
+  },
+  currentKm: {
+    type: Number,
+    min: 0
+  },
+  currentIssues: {
+    type: String,
+    trim: true
   },
   description: {
     type: String,

@@ -8,6 +8,7 @@ router.get('/', protect, adminOnly, async (req, res) => {
   try {
     const repairs = await Repair.find()
       .populate('parts.part', 'name')
+      .populate('customerVehicle', 'customerName customerPhone brand model plate')
       .sort({ date: -1 });
     res.json(repairs);
   } catch (error) {
@@ -18,7 +19,7 @@ router.get('/', protect, adminOnly, async (req, res) => {
 // Create repair (Admin only)
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
-    const { date, brand, model, plate, description, parts, laborCost } = req.body;
+    const { date, customerVehicle, brand, model, plate, currentKm, currentIssues, description, parts, laborCost } = req.body;
 
     // Parça maliyetini hesapla
     let partsCost = 0;
@@ -30,9 +31,12 @@ router.post('/', protect, adminOnly, async (req, res) => {
 
     const repair = await Repair.create({
       date: date || Date.now(),
+      customerVehicle: customerVehicle || null,
       brand,
       model,
       plate: plate.toUpperCase(),
+      currentKm: currentKm || null,
+      currentIssues: currentIssues || null,
       description,
       parts: parts || [],
       laborCost,
@@ -41,7 +45,8 @@ router.post('/', protect, adminOnly, async (req, res) => {
     });
 
     const populatedRepair = await Repair.findById(repair._id)
-      .populate('parts.part', 'name');
+      .populate('parts.part', 'name')
+      .populate('customerVehicle', 'customerName customerPhone brand model plate');
 
     res.status(201).json(populatedRepair);
   } catch (error) {
@@ -52,7 +57,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
 // Update repair (Admin only)
 router.put('/:id', protect, adminOnly, async (req, res) => {
   try {
-    const { date, brand, model, plate, description, parts, laborCost } = req.body;
+    const { date, customerVehicle, brand, model, plate, currentKm, currentIssues, description, parts, laborCost } = req.body;
 
     const repair = await Repair.findById(req.params.id);
     if (!repair) {
@@ -60,9 +65,12 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
     }
 
     repair.date = date || repair.date;
+    repair.customerVehicle = customerVehicle !== undefined ? customerVehicle : repair.customerVehicle;
     repair.brand = brand || repair.brand;
     repair.model = model || repair.model;
     repair.plate = plate ? plate.toUpperCase() : repair.plate;
+    repair.currentKm = currentKm !== undefined ? currentKm : repair.currentKm;
+    repair.currentIssues = currentIssues !== undefined ? currentIssues : repair.currentIssues;
     repair.description = description || repair.description;
     repair.parts = parts || repair.parts;
     repair.laborCost = laborCost !== undefined ? laborCost : repair.laborCost;
@@ -74,7 +82,8 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
     await repair.save();
 
     const populatedRepair = await Repair.findById(repair._id)
-      .populate('parts.part', 'name');
+      .populate('parts.part', 'name')
+      .populate('customerVehicle', 'customerName customerPhone brand model plate');
 
     res.json(populatedRepair);
   } catch (error) {
