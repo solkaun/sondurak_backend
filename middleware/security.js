@@ -38,7 +38,7 @@ exports.corsOptions = {
       // Production'da sadece belirli domainlere izin ver
       const allowedOrigins = process.env.ALLOWED_ORIGINS 
         ? process.env.ALLOWED_ORIGINS.split(',') 
-        : ['http://localhost:3000']
+        : ['https://sondurak-backend.vercel.app']
       
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true)
