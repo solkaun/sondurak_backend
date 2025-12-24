@@ -73,24 +73,30 @@ app.use((req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+// Vercel için export
+module.exports = app;
 
-// Graceful shutdown
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server ${PORT} portunda çalışıyor`);
-  console.log(`🔒 Güvenlik katmanları aktif`);
-  console.log(`📊 Ortam: ${process.env.NODE_ENV || 'development'}`);
-});
+// Local development için
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Rejection:', err.message);
-  server.close(() => process.exit(1));
-});
+  // Graceful shutdown
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 Server ${PORT} portunda çalışıyor`);
+    console.log(`🔒 Güvenlik katmanları aktif`);
+    console.log(`📊 Ortam: ${process.env.NODE_ENV || 'development'}`);
+  });
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err.message);
-  process.exit(1);
-});
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (err) => {
+    console.error('❌ Unhandled Rejection:', err.message);
+    server.close(() => process.exit(1));
+  });
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (err) => {
+    console.error('❌ Uncaught Exception:', err.message);
+    process.exit(1);
+  });
+}
 
