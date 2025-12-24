@@ -4,10 +4,27 @@ const Purchase = require('../models/Purchase');
 const Part = require('../models/Part');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all purchases (Admin ve User)
+// Get all purchases (Admin ve User) - with optional date filtering
 router.get('/', protect, async (req, res) => {
   try {
-    const purchases = await Purchase.find()
+    const { startDate, endDate } = req.query;
+    
+    // Tarih filtresi için query oluştur
+    let dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter.date = {};
+      if (startDate) {
+        dateFilter.date.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        // End date için günün sonunu al (23:59:59)
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.date.$lte = end;
+      }
+    }
+    
+    const purchases = await Purchase.find(dateFilter)
       .populate('supplier', 'shopName')
       .populate('part', 'name')
       .populate('createdBy', 'firstName lastName')
@@ -52,7 +69,7 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-// Update purchase (Admin ve User)
+// Update purchase (Admin: tüm kayıtlar, User: sadece kendi kayıtları)
 router.put('/:id', protect, async (req, res) => {
   try {
     const { date, supplier, partName, quantity, price } = req.body;
@@ -60,6 +77,11 @@ router.put('/:id', protect, async (req, res) => {
     const purchase = await Purchase.findById(req.params.id);
     if (!purchase) {
       return res.status(404).json({ message: 'Satın alım bulunamadı' });
+    }
+
+    // Yetki kontrolü: Admin tüm kayıtları, User sadece kendi kayıtlarını düzenleyebilir
+    if (req.user.role !== 'admin' && purchase.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Bu kaydı düzenleme yetkiniz yok' });
     }
 
     if (partName) {
