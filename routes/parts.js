@@ -10,7 +10,26 @@ router.get('/', protect, async (req, res) => {
     const query = search ? { name: { $regex: search, $options: 'i' } } : {};
     
     const parts = await Part.find(query).sort({ name: 1 });
-    res.json(parts);
+    
+    // Her parça için son satın alım fiyatını ekle
+    const Purchase = require('../models/Purchase');
+    const partsWithPrice = await Promise.all(
+      parts.map(async (part) => {
+        const lastPurchase = await Purchase.findOne({ part: part._id })
+          .sort({ date: -1 })
+          .limit(1);
+        
+        return {
+          _id: part._id,
+          name: part.name,
+          createdAt: part.createdAt,
+          updatedAt: part.updatedAt,
+          lastPrice: lastPurchase ? lastPurchase.price : 0
+        };
+      })
+    );
+    
+    res.json(partsWithPrice);
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }
