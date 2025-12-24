@@ -116,7 +116,7 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
   }
 });
 
-// Mark payment as received (Admin only)
+// Mark payment as received (Admin only) - One time only
 router.patch('/:id/payment', protect, adminOnly, async (req, res) => {
   try {
     const repair = await Repair.findById(req.params.id);
@@ -124,9 +124,15 @@ router.patch('/:id/payment', protect, adminOnly, async (req, res) => {
       return res.status(404).json({ message: 'Tamir kaydı bulunamadı' });
     }
 
-    repair.isPaid = !repair.isPaid; // Toggle payment status
-    repair.paidAt = repair.isPaid ? new Date() : null;
-    repair.paidBy = repair.isPaid ? req.user._id : null;
+    // Eğer zaten ödenmiş ise işlem yapma
+    if (repair.isPaid) {
+      return res.status(400).json({ message: 'Bu tamir için ödeme zaten alınmış' });
+    }
+
+    // Sadece ödeme alındı olarak işaretle (geri alınamaz)
+    repair.isPaid = true;
+    repair.paidAt = new Date();
+    repair.paidBy = req.user._id;
 
     await repair.save();
 
