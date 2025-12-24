@@ -4,32 +4,59 @@ const Purchase = require('../models/Purchase');
 const Part = require('../models/Part');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all purchases (Admin ve User) - with optional date filtering
+// Get all purchases (Admin ve User) - with filtering and pagination
 router.get('/', protect, async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, supplier, page = 1, limit = 50 } = req.query;
     
-    // Tarih filtresi için query oluştur
-    let dateFilter = {};
+    // Filtreler için query oluştur
+    let filter = {};
+    
+    // Tarih filtresi
     if (startDate || endDate) {
-      dateFilter.date = {};
+      filter.date = {};
       if (startDate) {
-        dateFilter.date.$gte = new Date(startDate);
+        filter.date.$gte = new Date(startDate);
       }
       if (endDate) {
         // End date için günün sonunu al (23:59:59)
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        dateFilter.date.$lte = end;
+        filter.date.$lte = end;
       }
     }
     
-    const purchases = await Purchase.find(dateFilter)
+    // Parçacı filtresi
+    if (supplier) {
+      filter.supplier = supplier;
+    }
+    
+    // Pagination hesaplamaları
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Toplam kayıt sayısı
+    const total = await Purchase.countDocuments(filter);
+    
+    // Sayfalanmış veriler
+    const purchases = await Purchase.find(filter)
       .populate('supplier', 'shopName')
       .populate('part', 'name')
       .populate('createdBy', 'firstName lastName')
-      .sort({ date: -1 });
-    res.json(purchases);
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limitNum);
+    
+    res.json({
+      purchases,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalItems: total,
+        itemsPerPage: limitNum
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }
@@ -127,4 +154,5 @@ router.delete('/:id', protect, adminOnly, async (req, res) => {
 });
 
 module.exports = router;
+
 
