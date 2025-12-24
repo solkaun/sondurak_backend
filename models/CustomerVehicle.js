@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 const customerVehicleSchema = new mongoose.Schema({
   customerName: {
@@ -42,7 +42,7 @@ const customerVehicleSchema = new mongoose.Schema({
     type: String,
     unique: true,
     required: true,
-    default: () => uuidv4() // Otomatik benzersiz QR kod
+    default: () => crypto.randomUUID() // Otomatik benzersiz QR kod (Node.js built-in)
   },
   lastOilChangeKm: {
     type: Number,
