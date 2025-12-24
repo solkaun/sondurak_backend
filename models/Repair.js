@@ -66,6 +66,17 @@ const repairSchema = new mongoose.Schema({
   totalCost: {
     type: Number,
     required: true
+  },
+  isPaid: {
+    type: Boolean,
+    default: false
+  },
+  paidAt: {
+    type: Date
+  },
+  paidBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, {
   timestamps: true
