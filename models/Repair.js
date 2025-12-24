@@ -8,21 +8,19 @@ const repairSchema = new mongoose.Schema({
   },
   customerVehicle: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'CustomerVehicle'
+    ref: 'CustomerVehicle',
+    required: true
   },
   brand: {
     type: String,
-    required: true,
     trim: true
   },
   model: {
     type: String,
-    required: true,
     trim: true
   },
   plate: {
     type: String,
-    required: true,
     trim: true,
     uppercase: true
   },

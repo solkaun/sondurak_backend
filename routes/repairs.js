@@ -19,7 +19,19 @@ router.get('/', protect, adminOnly, async (req, res) => {
 // Create repair (Admin only)
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
-    const { date, customerVehicle, brand, model, plate, currentKm, currentIssues, description, parts, laborCost } = req.body;
+    const { date, customerVehicle, currentKm, currentIssues, description, parts, laborCost } = req.body;
+
+    if (!customerVehicle) {
+      return res.status(400).json({ message: 'Müşteri aracı seçilmelidir' });
+    }
+
+    // Müşteri aracı bilgilerini al
+    const CustomerVehicle = require('../models/CustomerVehicle');
+    const vehicle = await CustomerVehicle.findById(customerVehicle);
+    
+    if (!vehicle) {
+      return res.status(404).json({ message: 'Müşteri aracı bulunamadı' });
+    }
 
     // Parça maliyetini hesapla
     let partsCost = 0;
@@ -31,10 +43,10 @@ router.post('/', protect, adminOnly, async (req, res) => {
 
     const repair = await Repair.create({
       date: date || Date.now(),
-      customerVehicle: customerVehicle || null,
-      brand,
-      model,
-      plate: plate.toUpperCase(),
+      customerVehicle,
+      brand: vehicle.brand,
+      model: vehicle.model,
+      plate: vehicle.plate,
       currentKm: currentKm || null,
       currentIssues: currentIssues || null,
       description,
@@ -57,7 +69,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
 // Update repair (Admin only)
 router.put('/:id', protect, adminOnly, async (req, res) => {
   try {
-    const { date, customerVehicle, brand, model, plate, currentKm, currentIssues, description, parts, laborCost } = req.body;
+    const { date, customerVehicle, currentKm, currentIssues, description, parts, laborCost } = req.body;
 
     const repair = await Repair.findById(req.params.id);
     if (!repair) {
@@ -65,10 +77,22 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
     }
 
     repair.date = date || repair.date;
-    repair.customerVehicle = customerVehicle !== undefined ? customerVehicle : repair.customerVehicle;
-    repair.brand = brand || repair.brand;
-    repair.model = model || repair.model;
-    repair.plate = plate ? plate.toUpperCase() : repair.plate;
+    
+    // Eğer customerVehicle değişiyorsa, yeni araç bilgilerini al
+    if (customerVehicle && customerVehicle !== repair.customerVehicle.toString()) {
+      const CustomerVehicle = require('../models/CustomerVehicle');
+      const vehicle = await CustomerVehicle.findById(customerVehicle);
+      
+      if (!vehicle) {
+        return res.status(404).json({ message: 'Müşteri aracı bulunamadı' });
+      }
+      
+      repair.customerVehicle = customerVehicle;
+      repair.brand = vehicle.brand;
+      repair.model = vehicle.model;
+      repair.plate = vehicle.plate;
+    }
+    
     repair.currentKm = currentKm !== undefined ? currentKm : repair.currentKm;
     repair.currentIssues = currentIssues !== undefined ? currentIssues : repair.currentIssues;
     repair.description = description || repair.description;
