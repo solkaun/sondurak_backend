@@ -1,0 +1,65 @@
+const mongoose = require('mongoose');
+
+const repairSchema = new mongoose.Schema({
+  date: {
+    type: Date,
+    required: true,
+    default: Date.now
+  },
+  brand: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  model: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  plate: {
+    type: String,
+    required: true,
+    trim: true,
+    uppercase: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  parts: [{
+    part: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Part',
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0
+    }
+  }],
+  laborCost: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  partsCost: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  totalCost: {
+    type: Number,
+    required: true
+  }
+}, {
+  timestamps: true
+});
+
+module.exports = mongoose.model('Repair', repairSchema);
+
