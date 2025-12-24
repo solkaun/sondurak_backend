@@ -3,8 +3,8 @@ const router = express.Router();
 const Supplier = require('../models/Supplier');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all suppliers (Admin only)
-router.get('/', protect, adminOnly, async (req, res) => {
+// Get all suppliers (Admin ve User - sadece okuma)
+router.get('/', protect, async (req, res) => {
   try {
     const suppliers = await Supplier.find().sort({ shopName: 1 });
     res.json(suppliers);

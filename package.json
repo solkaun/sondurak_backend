@@ -9,7 +9,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "create-user": "node scripts/createUser.js",
     "list-users": "node scripts/listUsers.js",
-    "delete-user": "node scripts/deleteUser.js"
+    "delete-user": "node scripts/deleteUser.js",
+    "migrate-purchases": "node scripts/migratePurchases.js"
   },
   "keywords": [
     "express",

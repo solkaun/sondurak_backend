@@ -3,7 +3,7 @@ const router = express.Router();
 const Part = require('../models/Part');
 const { protect } = require('../middleware/auth');
 
-// Get all parts
+// Get all parts (Admin ve User)
 router.get('/', protect, async (req, res) => {
   try {
     const search = req.query.search || '';
@@ -16,7 +16,7 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// Create part (otomatik oluşturulacak)
+// Create part (Admin ve User - otomatik oluşturulacak)
 router.post('/', protect, async (req, res) => {
   try {
     const { name } = req.body;

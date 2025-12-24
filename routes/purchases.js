@@ -4,12 +4,13 @@ const Purchase = require('../models/Purchase');
 const Part = require('../models/Part');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all purchases (Admin only)
-router.get('/', protect, adminOnly, async (req, res) => {
+// Get all purchases (Admin ve User)
+router.get('/', protect, async (req, res) => {
   try {
     const purchases = await Purchase.find()
       .populate('supplier', 'shopName')
       .populate('part', 'name')
+      .populate('createdBy', 'firstName lastName')
       .sort({ date: -1 });
     res.json(purchases);
   } catch (error) {
@@ -17,8 +18,8 @@ router.get('/', protect, adminOnly, async (req, res) => {
   }
 });
 
-// Create purchase (Admin only)
-router.post('/', protect, adminOnly, async (req, res) => {
+// Create purchase (Admin ve User)
+router.post('/', protect, async (req, res) => {
   try {
     const { date, supplier, partName, quantity, price } = req.body;
 
@@ -36,12 +37,14 @@ router.post('/', protect, adminOnly, async (req, res) => {
       part: part._id,
       quantity,
       price,
-      totalCost
+      totalCost,
+      createdBy: req.user._id // Giriş yapan kullanıcı
     });
 
     const populatedPurchase = await Purchase.findById(purchase._id)
       .populate('supplier', 'shopName')
-      .populate('part', 'name');
+      .populate('part', 'name')
+      .populate('createdBy', 'firstName lastName');
 
     res.status(201).json(populatedPurchase);
   } catch (error) {
@@ -49,8 +52,8 @@ router.post('/', protect, adminOnly, async (req, res) => {
   }
 });
 
-// Update purchase (Admin only)
-router.put('/:id', protect, adminOnly, async (req, res) => {
+// Update purchase (Admin ve User)
+router.put('/:id', protect, async (req, res) => {
   try {
     const { date, supplier, partName, quantity, price } = req.body;
 
@@ -77,7 +80,8 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
 
     const populatedPurchase = await Purchase.findById(purchase._id)
       .populate('supplier', 'shopName')
-      .populate('part', 'name');
+      .populate('part', 'name')
+      .populate('createdBy', 'firstName lastName');
 
     res.json(populatedPurchase);
   } catch (error) {
@@ -85,8 +89,8 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
   }
 });
 
-// Delete purchase (Admin only)
-router.delete('/:id', protect, adminOnly, async (req, res) => {
+// Delete purchase (Admin ve User)
+router.delete('/:id', protect, async (req, res) => {
   try {
     const purchase = await Purchase.findById(req.params.id);
     if (!purchase) {
