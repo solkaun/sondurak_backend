@@ -21,8 +21,8 @@ app.use(helmet());
 app.use(cors(corsOptions));
 
 // Body parser (JSON)
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// app.use(express.json({ limit: '10mb' }));
+// app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // NoSQL Injection koruması
 app.use(mongoSanitize());
@@ -34,7 +34,7 @@ app.use(xss());
 app.use(hpp());
 
 // Rate limiting - Tüm API route'larına
-app.use('/api/', apiLimiter);
+app.use('/api/');
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI)
