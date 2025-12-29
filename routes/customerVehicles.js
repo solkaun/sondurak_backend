@@ -5,10 +5,11 @@ const CustomerVehicle = require('../models/CustomerVehicle');
 const Repair = require('../models/Repair');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all customer vehicles (Admin ve User)
+// Get all customer vehicles (Admin ve User) - with search and pagination
 router.get('/', protect, async (req, res) => {
   try {
-    const search = req.query.search || '';
+    const { search, page = 1, limit = 8 } = req.query;
+    
     const query = search ? {
       $or: [
         { customerName: { $regex: search, $options: 'i' } },
@@ -18,8 +19,29 @@ router.get('/', protect, async (req, res) => {
       ]
     } : {};
     
-    const vehicles = await CustomerVehicle.find(query).sort({ createdAt: -1 });
-    res.json(vehicles);
+    // Pagination hesaplamaları
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Toplam kayıt sayısı
+    const total = await CustomerVehicle.countDocuments(query);
+    
+    // Sayfalanmış veriler
+    const vehicles = await CustomerVehicle.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+    
+    res.json({
+      vehicles,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalItems: total,
+        itemsPerPage: limitNum
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }

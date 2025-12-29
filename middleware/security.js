@@ -2,8 +2,8 @@ const rateLimit = require('express-rate-limit')
 
 // Genel API rate limiter
 exports.apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 dakika
-  max: 100, // 100 istek
+  windowMs: 1 * 60 * 1000, // 1 dakika
+  max: 10000, // 100 istek
   message: 'Bu IP adresinden çok fazla istek geldi, lütfen daha sonra tekrar deneyin',
   standardHeaders: true,
   legacyHeaders: false,
@@ -11,10 +11,10 @@ exports.apiLimiter = rateLimit({
 
 // Auth route'ları için daha sıkı limiter
 exports.authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 dakika
+  windowMs: 1 * 60 * 1000, // 1 dakika
   max: 5, // 5 başarısız deneme
   skipSuccessfulRequests: true, // Başarılı istekleri sayma
-  message: 'Çok fazla giriş denemesi, lütfen 15 dakika sonra tekrar deneyin',
+  message: 'Çok fazla giriş denemesi, lütfen 1 dakika sonra tekrar deneyin',
   standardHeaders: true,
   legacyHeaders: false,
 })

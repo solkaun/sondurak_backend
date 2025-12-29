@@ -4,11 +4,44 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all users (Admin only)
+// Get all users (Admin only) - with search and pagination
 router.get('/', protect, adminOnly, async (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.json(users);
+    const { search, page = 1, limit = 8 } = req.query;
+    
+    const query = search ? {
+      $or: [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } }
+      ]
+    } : {};
+    
+    // Pagination hesaplamaları
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Toplam kayıt sayısı
+    const total = await User.countDocuments(query);
+    
+    // Sayfalanmış veriler
+    const users = await User.find(query)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+    
+    res.json({
+      users,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalItems: total,
+        itemsPerPage: limitNum
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }

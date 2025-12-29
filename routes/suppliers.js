@@ -3,11 +3,42 @@ const router = express.Router();
 const Supplier = require('../models/Supplier');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all suppliers (Admin ve User - sadece okuma)
+// Get all suppliers (Admin ve User - sadece okuma) - with search and pagination
 router.get('/', protect, async (req, res) => {
   try {
-    const suppliers = await Supplier.find().sort({ shopName: 1 });
-    res.json(suppliers);
+    const { search, page = 1, limit = 8 } = req.query;
+    
+    const query = search ? {
+      $or: [
+        { shopName: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+        { address: { $regex: search, $options: 'i' } }
+      ]
+    } : {};
+    
+    // Pagination hesaplamaları
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Toplam kayıt sayısı
+    const total = await Supplier.countDocuments(query);
+    
+    // Sayfalanmış veriler
+    const suppliers = await Supplier.find(query)
+      .sort({ shopName: 1 })
+      .skip(skip)
+      .limit(limitNum);
+    
+    res.json({
+      suppliers,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalItems: total,
+        itemsPerPage: limitNum
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }

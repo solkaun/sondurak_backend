@@ -32,6 +32,14 @@ const repairSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  isOilChange: {
+    type: Boolean,
+    default: false
+  },
+  nextOilChangeKm: {
+    type: Number,
+    min: 0
+  },
   description: {
     type: String,
     required: true

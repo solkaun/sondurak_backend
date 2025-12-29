@@ -3,11 +3,41 @@ const router = express.Router();
 const Expense = require('../models/Expense');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all expenses (Admin only)
+// Get all expenses (Admin only) - with search and pagination
 router.get('/', protect, adminOnly, async (req, res) => {
   try {
-    const expenses = await Expense.find().sort({ date: -1 });
-    res.json(expenses);
+    const { search, page = 1, limit = 8 } = req.query;
+    
+    const query = search ? {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } }
+      ]
+    } : {};
+    
+    // Pagination hesaplamaları
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Toplam kayıt sayısı
+    const total = await Expense.countDocuments(query);
+    
+    // Sayfalanmış veriler
+    const expenses = await Expense.find(query)
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limitNum);
+    
+    res.json({
+      expenses,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalItems: total,
+        itemsPerPage: limitNum
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }

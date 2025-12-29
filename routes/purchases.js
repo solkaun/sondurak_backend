@@ -7,7 +7,7 @@ const { protect, adminOnly } = require('../middleware/auth');
 // Get all purchases (Admin ve User) - with filtering and pagination
 router.get('/', protect, async (req, res) => {
   try {
-    const { startDate, endDate, supplier, page = 1, limit = 50 } = req.query;
+    const { startDate, endDate, supplier, search, page = 1, limit = 8 } = req.query;
     
     // Filtreler için query oluştur
     let filter = {};
@@ -36,17 +36,31 @@ router.get('/', protect, async (req, res) => {
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
     
-    // Toplam kayıt sayısı
-    const total = await Purchase.countDocuments(filter);
-    
-    // Sayfalanmış veriler
-    const purchases = await Purchase.find(filter)
+    // Önce tüm kayıtları populate et (arama için)
+    let allPurchases = await Purchase.find(filter)
       .populate('supplier', 'shopName')
       .populate('part', 'name')
       .populate('createdBy', 'firstName lastName')
-      .sort({ date: -1 })
-      .skip(skip)
-      .limit(limitNum);
+      .sort({ date: -1 });
+    
+    // Arama filtresi (populate edilmiş veriler üzerinde)
+    if (search && search.trim()) {
+      const searchLower = search.toLowerCase();
+      allPurchases = allPurchases.filter(purchase => {
+        return (
+          purchase.part?.name?.toLowerCase().includes(searchLower) ||
+          purchase.supplier?.shopName?.toLowerCase().includes(searchLower) ||
+          purchase.createdBy?.firstName?.toLowerCase().includes(searchLower) ||
+          purchase.createdBy?.lastName?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+    
+    // Toplam kayıt sayısı (arama sonrası)
+    const total = allPurchases.length;
+    
+    // Pagination uygula
+    const purchases = allPurchases.slice(skip, skip + limitNum);
     
     res.json({
       purchases,

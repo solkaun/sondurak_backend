@@ -3,15 +3,59 @@ const router = express.Router();
 const Repair = require('../models/Repair');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all repairs (Admin only)
+// Get all repairs (Admin only) - with search and pagination
 router.get('/', protect, adminOnly, async (req, res) => {
   try {
-    const repairs = await Repair.find()
+    const { search, page = 1, limit = 8 } = req.query;
+    
+    // İlk olarak customerVehicle'larda ara
+    let vehicleIds = [];
+    if (search) {
+      const CustomerVehicle = require('../models/CustomerVehicle');
+      const vehicles = await CustomerVehicle.find({
+        $or: [
+          { customerName: { $regex: search, $options: 'i' } },
+          { plate: { $regex: search, $options: 'i' } },
+          { brand: { $regex: search, $options: 'i' } },
+          { model: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      vehicleIds = vehicles.map(v => v._id);
+    }
+    
+    const query = search ? {
+      $or: [
+        { description: { $regex: search, $options: 'i' } },
+        { customerVehicle: { $in: vehicleIds } }
+      ]
+    } : {};
+    
+    // Pagination hesaplamaları
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Toplam kayıt sayısı
+    const total = await Repair.countDocuments(query);
+    
+    // Sayfalanmış veriler
+    const repairs = await Repair.find(query)
       .populate('parts.part', 'name')
       .populate('customerVehicle', 'customerName customerPhone brand model plate')
       .populate('paidBy', 'firstName lastName')
-      .sort({ date: -1 });
-    res.json(repairs);
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limitNum);
+    
+    res.json({
+      repairs,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalItems: total,
+        itemsPerPage: limitNum
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }
@@ -20,7 +64,7 @@ router.get('/', protect, adminOnly, async (req, res) => {
 // Create repair (Admin only)
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
-    const { date, customerVehicle, currentKm, currentIssues, description, parts, laborCost } = req.body;
+    const { date, customerVehicle, currentKm, currentIssues, isOilChange, nextOilChangeKm, description, parts, laborCost } = req.body;
 
     if (!customerVehicle) {
       return res.status(400).json({ message: 'Müşteri aracı seçilmelidir' });
@@ -50,12 +94,21 @@ router.post('/', protect, adminOnly, async (req, res) => {
       plate: vehicle.plate,
       currentKm: currentKm || null,
       currentIssues: currentIssues || null,
+      isOilChange: isOilChange || false,
+      nextOilChangeKm: nextOilChangeKm || null,
       description,
       parts: parts || [],
       laborCost,
       partsCost,
       totalCost
     });
+
+    // Eğer yağ bakımı yapıldıysa, araç bilgilerini güncelle
+    if (isOilChange && currentKm) {
+      vehicle.lastOilChangeKm = currentKm;
+      vehicle.lastOilChangeDate = date || Date.now();
+      await vehicle.save();
+    }
 
     const populatedRepair = await Repair.findById(repair._id)
       .populate('parts.part', 'name')
@@ -70,7 +123,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
 // Update repair (Admin only)
 router.put('/:id', protect, adminOnly, async (req, res) => {
   try {
-    const { date, customerVehicle, currentKm, currentIssues, description, parts, laborCost } = req.body;
+    const { date, customerVehicle, currentKm, currentIssues, isOilChange, nextOilChangeKm, description, parts, laborCost } = req.body;
 
     const repair = await Repair.findById(req.params.id);
     if (!repair) {
@@ -96,6 +149,8 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
     
     repair.currentKm = currentKm !== undefined ? currentKm : repair.currentKm;
     repair.currentIssues = currentIssues !== undefined ? currentIssues : repair.currentIssues;
+    repair.isOilChange = isOilChange !== undefined ? isOilChange : repair.isOilChange;
+    repair.nextOilChangeKm = nextOilChangeKm !== undefined ? nextOilChangeKm : repair.nextOilChangeKm;
     repair.description = description || repair.description;
     repair.parts = parts || repair.parts;
     repair.laborCost = laborCost !== undefined ? laborCost : repair.laborCost;
@@ -103,6 +158,17 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
     // Parça maliyetini yeniden hesapla
     repair.partsCost = repair.parts.reduce((sum, item) => sum + (item.quantity * item.price), 0);
     repair.totalCost = repair.laborCost + repair.partsCost;
+
+    // Eğer yağ bakımı yapıldıysa ve önceden yağ bakımı değilse, araç bilgilerini güncelle
+    if (isOilChange && currentKm && !repair.isOilChange) {
+      const CustomerVehicle = require('../models/CustomerVehicle');
+      const vehicle = await CustomerVehicle.findById(repair.customerVehicle);
+      if (vehicle) {
+        vehicle.lastOilChangeKm = currentKm;
+        vehicle.lastOilChangeDate = date || repair.date;
+        await vehicle.save();
+      }
+    }
 
     await repair.save();
 

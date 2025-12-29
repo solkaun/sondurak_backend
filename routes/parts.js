@@ -3,13 +3,25 @@ const router = express.Router();
 const Part = require('../models/Part');
 const { protect, adminOnly } = require('../middleware/auth');
 
-// Get all parts (Admin ve User)
+// Get all parts (Admin ve User) - with search and pagination
 router.get('/', protect, async (req, res) => {
   try {
-    const search = req.query.search || '';
+    const { search, page = 1, limit = 8 } = req.query;
     const query = search ? { name: { $regex: search, $options: 'i' } } : {};
     
-    const parts = await Part.find(query).sort({ name: 1 });
+    // Pagination hesaplamaları
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Toplam kayıt sayısı
+    const total = await Part.countDocuments(query);
+    
+    // Sayfalanmış veriler
+    const parts = await Part.find(query)
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limitNum);
     
     // Her parça için son satın alım fiyatını ekle
     const Purchase = require('../models/Purchase');
@@ -29,7 +41,15 @@ router.get('/', protect, async (req, res) => {
       })
     );
     
-    res.json(partsWithPrice);
+    res.json({
+      parts: partsWithPrice,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalItems: total,
+        itemsPerPage: limitNum
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Sunucu hatası', error: error.message });
   }
