@@ -35,7 +35,7 @@ app.use(hpp());
 
 // Rate limiting - Tüm API route'larına
 app.use('/api/');
-
+  
 // Database connection
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB bağlantısı başarılı'))
